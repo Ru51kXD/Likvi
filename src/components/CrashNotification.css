@@ -1,0 +1,133 @@
+.crash-notification {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  animation: crashIn 0.5s ease-out;
+  backdrop-filter: blur(10px);
+}
+
+.crash-notification.fade-out {
+  animation: crashOut 0.5s ease-in forwards;
+}
+
+@keyframes crashIn {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes crashOut {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+}
+
+.crash-content {
+  background: linear-gradient(135deg, rgba(139, 0, 0, 0.9), rgba(100, 0, 0, 0.9));
+  border: 3px solid #ff0000;
+  border-radius: 20px;
+  padding: 40px;
+  text-align: center;
+  box-shadow: 0 0 50px rgba(255, 0, 0, 0.5), 0 0 100px rgba(255, 0, 0, 0.3);
+  max-width: 500px;
+  animation: shake 0.5s;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-10px); }
+  20%, 40%, 60%, 80% { transform: translateX(10px); }
+}
+
+.crash-icon {
+  font-size: 80px;
+  margin-bottom: 20px;
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+}
+
+.crash-title {
+  font-size: 48px;
+  color: #ff0000;
+  margin: 20px 0;
+  text-shadow: 0 0 20px #ff0000, 0 0 40px #ff0000;
+  font-weight: bold;
+  letter-spacing: 5px;
+  animation: glow 1s infinite alternate;
+}
+
+@keyframes glow {
+  from {
+    text-shadow: 0 0 20px #ff0000, 0 0 40px #ff0000;
+  }
+  to {
+    text-shadow: 0 0 30px #ff0000, 0 0 60px #ff0000, 0 0 80px #ff0000;
+  }
+}
+
+.crash-message {
+  font-size: 18px;
+  color: #ffffff;
+  margin: 20px 0;
+  line-height: 1.6;
+}
+
+.crash-stats {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 10px;
+  padding: 15px;
+  margin: 20px 0;
+  color: #ffcccc;
+  font-size: 14px;
+}
+
+.crash-stats p {
+  margin: 5px 0;
+}
+
+.crash-reset-button {
+  background: linear-gradient(135deg, #ff0000, #cc0000);
+  border: 2px solid #ffffff;
+  border-radius: 10px;
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: bold;
+  padding: 15px 40px;
+  cursor: pointer;
+  margin-top: 20px;
+  transition: all 0.3s;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  box-shadow: 0 0 20px rgba(255, 0, 0, 0.5);
+}
+
+.crash-reset-button:hover {
+  background: linear-gradient(135deg, #ff3333, #ff0000);
+  transform: scale(1.05);
+  box-shadow: 0 0 30px rgba(255, 0, 0, 0.8);
+}
+
+.crash-reset-button:active {
+  transform: scale(0.95);
+}
