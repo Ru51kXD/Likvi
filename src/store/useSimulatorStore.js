@@ -28,6 +28,7 @@ export const useSimulatorStore = create((set) => ({
   particleEffects: true,
   soundEnabled: true,
   safeMode: true,
+  speedMultiplier: 1,
   
   // Данные полета
   flightTime: 0,
@@ -52,6 +53,7 @@ export const useSimulatorStore = create((set) => ({
   setYaw: (value) => set({ yaw: Math.max(-1, Math.min(1, value)) }),
   setMoveX: (value) => set({ moveX: Math.max(-1, Math.min(1, value)) }),
   setMoveZ: (value) => set({ moveZ: Math.max(-1, Math.min(1, value)) }),
+  setSpeedMultiplier: (value) => set({ speedMultiplier: Math.max(0.2, Math.min(3, value)) }),
   startFlight: () => set({ awaitingStart: false, isFlying: true }),
   setStartPosition: (pos) => set({ startPosition: pos, gps: pos }),
   
@@ -77,7 +79,8 @@ export const useSimulatorStore = create((set) => ({
     gps: (state) => ({ x: state.startPosition.x, y: state.startPosition.y, z: state.startPosition.z }),
     rotation: { x: 0, y: 0, z: 0 },
     moveX: 0,
-    moveZ: 0
+    moveZ: 0,
+    speedMultiplier: 1
   }),
   
   setCameraMode: (mode) => set({ cameraMode: mode }),

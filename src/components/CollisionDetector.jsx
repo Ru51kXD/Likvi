@@ -10,6 +10,9 @@ function CollisionDetector({ quadcopterRef }) {
   const collidableObjectsRef = useRef([])
   
   useFrame((state, delta) => {
+    // Коллизии отключены - дрон не может разрушиться
+    return
+    
     if (!quadcopterRef.current) return
     
     const quadcopter = quadcopterRef.current
@@ -26,6 +29,8 @@ function CollisionDetector({ quadcopterRef }) {
     
     // Игнорируем столкновения пока не поднялись выше 6м
     if (altitude < 6) return
+    // И в облаках тоже нет коллизий (свободный полет)
+    if (altitude > 200) return
     
     // Не проверяем столкновения если скорость очень мала (почти на месте)
     if (speed < 5 && altitude < 2) return

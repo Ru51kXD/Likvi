@@ -103,33 +103,64 @@ function Car({ position, color = 0xff0000 }) {
   )
 }
 
+// Простая лодка, движущаяся по прямой
+function Boat({ position, direction = 0, color = 0x2266cc, speed = 5 }) {
+  const boatRef = useRef()
+  useFrame((state, delta) => {
+    if (!boatRef.current) return
+    boatRef.current.position.x += Math.cos(direction) * speed * delta
+    boatRef.current.position.z += Math.sin(direction) * speed * delta
+    boatRef.current.rotation.y = -direction
+    // Легкая покачка
+    boatRef.current.position.y = 0.1 + Math.sin(state.clock.elapsedTime * 2) * 0.05
+  })
+  return (
+    <group ref={boatRef} position={position} userData={{ isCollidable: false }}>
+      <mesh>
+        <boxGeometry args={[2.5, 0.5, 1]} />
+        <meshStandardMaterial color={color} roughness={0.7} metalness={0.2} />
+      </mesh>
+    </group>
+  )
+}
+
+// Воздушный шар (балун)
+function Balloon({ position, color = 0xffaa00 }) {
+  const ref = useRef()
+  useFrame((state) => {
+    if (!ref.current) return
+    ref.current.position.y = position[1] + Math.sin(state.clock.elapsedTime * 0.5 + position[0]) * 2
+    ref.current.rotation.y += 0.1 * state.clock.getDelta()
+  })
+  return (
+    <group ref={ref} position={position} userData={{ isCollidable: false }}>
+      <mesh position={[0, 0, 0]}>
+        <sphereGeometry args={[1.5, 16, 16]} />
+        <meshStandardMaterial color={color} roughness={0.6} metalness={0.1} />
+      </mesh>
+      <mesh position={[0, -2, 0]}>
+        <boxGeometry args={[0.8, 1, 0.8]} />
+        <meshStandardMaterial color={0x885533} />
+      </mesh>
+    </group>
+  )
+}
+
 function EnhancedTerrain() {
-  // Создание ландшафта
+  // Создание плоского ландшафта (без проблем с z-fighting)
   const safeRadius = 120 // радиус свободного поля вокруг точки старта
-  const worldHalf = 300 // половина размера мира (уменьшенная карта)
+  const worldHalf = 400 // увеличенный размер мира для более просторной карты
   const terrainGeometry = useMemo(() => {
-    const geometry = new THREE.PlaneGeometry(worldHalf * 2, worldHalf * 2, 64, 64)
-    const vertices = geometry.attributes.position.array
-    
-    for (let i = 2; i < vertices.length; i += 3) {
-      const x = vertices[i - 2]
-      const z = vertices[i - 1]
-      const height = Math.sin(x * 0.01) * Math.cos(z * 0.01) * 5 +
-                     Math.sin(x * 0.05) * Math.cos(z * 0.05) * 2 +
-                     Math.random() * 1 - 0.5
-      vertices[i] = height
-    }
-    
-    geometry.attributes.position.needsUpdate = true
-    geometry.computeVertexNormals()
+    const geometry = new THREE.PlaneGeometry(worldHalf * 2, worldHalf * 2, 4, 4)
     return geometry
   }, [])
 
+  // Улучшенный материал для земли с более реалистичными цветами
   const groundMaterial = useMemo(() => {
     return new THREE.MeshStandardMaterial({
-      color: 0x90EE90,
-      roughness: 0.8,
-      metalness: 0.1
+      color: 0x7cb342, // Более реалистичный зеленый цвет травы
+      roughness: 0.85,
+      metalness: 0.05
     })
   }, [])
 
@@ -153,20 +184,35 @@ function EnhancedTerrain() {
 
   return (
     <>
+      {/* Стартовая полоса (runway) - рисуется первой */}
+      <group position={[0, 0.05, 0]} userData={{ isCollidable: false }}>
+        <mesh rotation={[-Math.PI / 2, 0, 0]}>
+          <planeGeometry args={[20, 400]} />
+          <meshStandardMaterial color={0x222222} roughness={0.9} metalness={0.05} depthWrite={true} />
+        </mesh>
+        {/* Центральная разметка */}
+        {Array.from({ length: 20 }).map((_, i) => (
+          <mesh key={`mark-${i}`} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, -180 + i * 20]}>
+            <planeGeometry args={[1, 6]} />
+            <meshStandardMaterial color={0xffffff} depthWrite={true} />
+          </mesh>
+        ))}
+      </group>
+      
       {/* Вертолетная площадка (helipad) в точке старта */}
-      <group position={[0, 0.02, 0]} userData={{ isCollidable: false }}>
+      <group position={[0, 0.1, 0]} userData={{ isCollidable: false }}>
         {/* Круглая площадка */}
         <mesh rotation={[-Math.PI / 2, 0, 0]}>
           <circleGeometry args={[8, 48]} />
-          <meshStandardMaterial color={0x3a3a3a} roughness={0.9} metalness={0.05} />
+          <meshStandardMaterial color={0x3a3a3a} roughness={0.9} metalness={0.05} depthWrite={true} />
         </mesh>
         {/* Белая окантовка */}
-        <mesh rotation={[-Math.PI / 2, 0, 0]}>
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
           <ringGeometry args={[7.5, 8, 48]} />
-          <meshStandardMaterial color={0xffffff} />
+          <meshStandardMaterial color={0xffffff} depthWrite={true} />
         </mesh>
         {/* Буква H */}
-        <group rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
+        <group rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
           <mesh position={[-1.5, 0, 0]}>
             <boxGeometry args={[1, 6, 0.1]} />
             <meshStandardMaterial color={0xffffff} />
@@ -181,20 +227,6 @@ function EnhancedTerrain() {
           </mesh>
         </group>
       </group>
-      {/* Стартовая полоса (runway) */}
-      <group position={[0, 0.01, 0]} userData={{ isCollidable: false }}>
-        <mesh rotation={[-Math.PI / 2, 0, 0]}>
-          <planeGeometry args={[20, 400]} />
-          <meshStandardMaterial color={0x222222} roughness={0.9} metalness={0.05} />
-        </mesh>
-        {/* Центральная разметка */}
-        {Array.from({ length: 20 }).map((_, i) => (
-          <mesh key={`mark-${i}`} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, -180 + i * 20]}>
-            <planeGeometry args={[1, 6]} />
-            <meshStandardMaterial color={0xffffff} />
-          </mesh>
-        ))}
-      </group>
 
       {/* Земля - упрощенная без теней */}
       <RigidBody type="fixed" colliders="trimesh">
@@ -206,25 +238,113 @@ function EnhancedTerrain() {
         />
       </RigidBody>
 
-      {/* Реки */}
+      {/* Реки - улучшенный внешний вид */}
       {rivers.map((seg, i) => (
         <mesh
           key={`river-${i}`}
           rotation={seg.rotation}
-          position={seg.position}
+          position={[seg.position[0], 0.03, seg.position[2]]}
           userData={{ isCollidable: false }}
         >
           <planeGeometry args={[seg.width, seg.length]} />
-          <meshStandardMaterial color={0x3BA4FF} roughness={0.4} metalness={0.1} />
+          <meshStandardMaterial 
+            color={0x2E86AB} 
+            roughness={0.3} 
+            metalness={0.05}
+            depthWrite={true}
+          />
         </mesh>
       ))}
 
-      {/* Деревья с коллизиями (уменьшено для стабильности) */}
-      {Array.from({ length: 40 }).map((_, i) => {
-        const x = (Math.random() - 0.5) * (worldHalf * 1.6)
-        const z = (Math.random() - 0.5) * (worldHalf * 1.6)
+      {/* Лодки на реках - больше лодок для оживления */}
+      {rivers.length > 0 && (
+        <>
+          <Boat position={[ -80, 0.1, -60 ]} direction={Math.PI * 0.05} />
+          <Boat position={[ 120, 0.1, 80 ]} direction={-Math.PI * 0.12} color={0x8844cc} />
+          <Boat position={[ -60, 0.1, 120 ]} direction={Math.PI * 0.2} color={0x2266cc} />
+        </>
+      )}
+      
+      {/* Камни и валуны на ландшафте */}
+      {Array.from({ length: 30 }).map((_, i) => {
+        const x = (Math.random() - 0.5) * (worldHalf * 1.8)
+        const z = (Math.random() - 0.5) * (worldHalf * 1.8)
         if (Math.hypot(x, z) < safeRadius) return null
-        const height = Math.random() * 2 + 3
+        const size = 0.3 + Math.random() * 0.7
+        const yRotation = Math.random() * Math.PI * 2
+        
+        return (
+          <mesh
+            key={`rock-${i}`}
+            position={[x, size * 0.5, z]}
+            rotation={[0, yRotation, 0]}
+            userData={{ isCollidable: true }}
+          >
+            <dodecahedronGeometry args={[size, 0]} />
+            <meshStandardMaterial
+              color={new THREE.Color().setHSL(0.1, 0.2, 0.3 + Math.random() * 0.2)}
+              roughness={0.9}
+              metalness={0.1}
+            />
+          </mesh>
+        )
+      })}
+      
+      {/* Кусты и небольшие растения */}
+      {Array.from({ length: 80 }).map((_, i) => {
+        const x = (Math.random() - 0.5) * (worldHalf * 1.8)
+        const z = (Math.random() - 0.5) * (worldHalf * 1.8)
+        if (Math.hypot(x, z) < safeRadius) return null
+        const size = 0.4 + Math.random() * 0.6
+        const height = size * 0.8
+        
+        return (
+          <mesh
+            key={`bush-${i}`}
+            position={[x, height * 0.5, z]}
+            userData={{ isCollidable: false }}
+          >
+            <sphereGeometry args={[size, 8, 6]} />
+            <meshStandardMaterial
+              color={new THREE.Color().setHSL(0.22 + Math.random() * 0.08, 0.6, 0.25 + Math.random() * 0.15)}
+              roughness={0.9}
+            />
+          </mesh>
+        )
+      })}
+
+      {/* Деревья с коллизиями - больше деревьев для реалистичности */}
+      {Array.from({ length: 120 }).map((_, i) => {
+        const x = (Math.random() - 0.5) * (worldHalf * 1.8)
+        const z = (Math.random() - 0.5) * (worldHalf * 1.8)
+        if (Math.hypot(x, z) < safeRadius) return null
+        
+        // Разнообразие размеров деревьев
+        const treeType = Math.random()
+        let height, trunkRadius, crownRadius, crownHeight
+        if (treeType < 0.7) {
+          // Обычные деревья
+          height = Math.random() * 3 + 4
+          trunkRadius = 0.25 + Math.random() * 0.15
+          crownRadius = 1.8 + Math.random() * 0.8
+          crownHeight = 3 + Math.random() * 2
+        } else if (treeType < 0.9) {
+          // Высокие деревья
+          height = Math.random() * 5 + 6
+          trunkRadius = 0.35 + Math.random() * 0.2
+          crownRadius = 2.5 + Math.random() * 1.2
+          crownHeight = 4 + Math.random() * 2
+        } else {
+          // Небольшие деревья
+          height = Math.random() * 2 + 2.5
+          trunkRadius = 0.2 + Math.random() * 0.1
+          crownRadius = 1.2 + Math.random() * 0.6
+          crownHeight = 2 + Math.random() * 1
+        }
+        
+        // Разнообразие цветов кроны
+        const greenVariation = Math.random() * 0.3 + 0.2
+        const crownColor = new THREE.Color().setHSL(0.25 + Math.random() * 0.1, 0.7, greenVariation)
         
         return (
           <group key={`tree-${i}`} position={[x, height / 2, z]}>
@@ -232,28 +352,51 @@ function EnhancedTerrain() {
               position={[0, height / 2, 0]} 
               userData={{ isCollidable: true }}
             >
-              <cylinderGeometry args={[0.3, 0.4, height, 8]} />
-              <meshStandardMaterial color={0x8B4513} roughness={0.9} />
+              <cylinderGeometry args={[trunkRadius * 0.8, trunkRadius, height, 8]} />
+              <meshStandardMaterial 
+                color={new THREE.Color().setHSL(0.08, 0.5, 0.25 + Math.random() * 0.15)} 
+                roughness={0.9} 
+              />
             </mesh>
             <mesh 
-              position={[0, height + 1, 0]} 
+              position={[0, height + crownHeight * 0.3, 0]} 
               userData={{ isCollidable: true }}
             >
-              <coneGeometry args={[2, 4, 8]} />
-              <meshStandardMaterial color={0x228B22} roughness={0.8} />
+              <coneGeometry args={[crownRadius, crownHeight, 8]} />
+              <meshStandardMaterial color={crownColor} roughness={0.85} />
             </mesh>
           </group>
         )
       })}
 
-      {/* Здания (минималистично, но обширно) */}
-      {Array.from({ length: 25 }).map((_, i) => {
+      {/* Здания - более разнообразные и детализированные */}
+      {Array.from({ length: 40 }).map((_, i) => {
         const x = (Math.random() - 0.5) * (worldHalf * 2)
         const z = (Math.random() - 0.5) * (worldHalf * 2)
         if (Math.hypot(x, z) < safeRadius) return null
-        const height = 5 + Math.random() * 20
-        const width = 3 + Math.random() * 5
-        const depth = 3 + Math.random() * 5
+        
+        const buildingType = Math.random()
+        let height, width, depth, color
+        
+        if (buildingType < 0.4) {
+          // Низкие дома
+          height = 4 + Math.random() * 3
+          width = 5 + Math.random() * 4
+          depth = 5 + Math.random() * 4
+          color = new THREE.Color().setHSL(0.08 + Math.random() * 0.05, 0.4, 0.5)
+        } else if (buildingType < 0.7) {
+          // Средние здания
+          height = 8 + Math.random() * 8
+          width = 4 + Math.random() * 5
+          depth = 4 + Math.random() * 5
+          color = new THREE.Color().setHSL(0.1 + Math.random() * 0.1, 0.35, 0.4)
+        } else {
+          // Высокие здания
+          height = 15 + Math.random() * 15
+          width = 4 + Math.random() * 4
+          depth = 4 + Math.random() * 4
+          color = new THREE.Color().setHSL(0.15 + Math.random() * 0.15, 0.3, 0.35)
+        }
         
         return (
           <group key={`building-${i}`} position={[x, height / 2, z]}>
@@ -262,12 +405,48 @@ function EnhancedTerrain() {
             >
               <boxGeometry args={[width, height, depth]} />
               <meshStandardMaterial
-                color={new THREE.Color().setHSL(Math.random(), 0.3, 0.5)}
-                roughness={0.7}
-                metalness={0.2}
+                color={color}
+                roughness={0.75}
+                metalness={0.15}
               />
             </mesh>
-            {/* Минималистично без множества окон */}
+            {/* Крыша для домов */}
+            {buildingType < 0.4 && (
+              <mesh 
+                position={[0, height / 2 + 0.5, 0]}
+                userData={{ isCollidable: true }}
+              >
+                <coneGeometry args={[Math.max(width, depth) * 0.7, 2, 4]} />
+                <meshStandardMaterial
+                  color={new THREE.Color().setHSL(0.05, 0.6, 0.3)}
+                  roughness={0.8}
+                />
+              </mesh>
+            )}
+            {/* Окна для высоких зданий */}
+            {buildingType >= 0.7 && (
+              <>
+                {Array.from({ length: Math.floor(height / 4) }).map((_, j) =>
+                  Array.from({ length: 2 }).map((_, k) => (
+                    <mesh
+                      key={`window-${j}-${k}`}
+                      position={[
+                        (k - 0.5) * width * 0.4,
+                        (j - Math.floor(height / 8)) * 4 - height / 2 + 2,
+                        depth / 2 + 0.01
+                      ]}
+                    >
+                      <planeGeometry args={[0.8, 1.2]} />
+                      <meshStandardMaterial
+                        color={Math.random() > 0.7 ? 0xffffaa : 0x001122}
+                        emissive={Math.random() > 0.7 ? 0xffffaa : 0x000000}
+                        emissiveIntensity={Math.random() > 0.7 ? 0.3 : 0}
+                      />
+                    </mesh>
+                  ))
+                )}
+              </>
+            )}
           </group>
         )
       })}
@@ -303,23 +482,47 @@ function EnhancedTerrain() {
         )
       })}
 
-      {/* Дороги */}
-      {Array.from({ length: 10 }).map((_, i) => {
-        const angle = (i / 10) * Math.PI * 2
-        const x = Math.cos(angle) * 200
-        const z = Math.sin(angle) * 200
-        
-        return (
-          <mesh
-            key={`road-${i}`}
-            rotation={[-Math.PI / 2, angle, 0]}
-            position={[x, 0.01, z]}
-          >
-            <planeGeometry args={[10, 200]} />
-            <meshStandardMaterial color={0x444444} roughness={0.6} />
+      {/* Воздушные шары высоко в небе (без коллизий) */}
+      {[
+        [-150, 60, -120],
+        [100, 80, 160],
+        [0, 70, -200]
+      ].map((p, i) => (
+        <Balloon key={`balloon-${i}`} position={p} />
+      ))}
+
+      {/* Дороги - нормальная сетка */}
+      {/* Главная дорога вдоль оси Z (от взлетной полосы) */}
+      <group position={[0, 0.04, 0]}>
+        <mesh rotation={[-Math.PI / 2, 0, 0]}>
+          <planeGeometry args={[12, 600]} />
+          <meshStandardMaterial color={0x333333} roughness={0.7} metalness={0.05} />
+        </mesh>
+        {/* Разметка */}
+        {Array.from({ length: 25 }).map((_, i) => (
+          <mesh key={`main-mark-${i}`} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, -280 + i * 24]}>
+            <planeGeometry args={[0.5, 6]} />
+            <meshStandardMaterial color={0xFFFFFF} />
           </mesh>
-        )
-      })}
+        ))}
+      </group>
+      
+      {/* Поперечные дороги */}
+      {[-150, 150].map((zPos, i) => (
+        <group key={`cross-road-${i}`} position={[0, 0.04, zPos]}>
+          <mesh rotation={[-Math.PI / 2, Math.PI / 2, 0]}>
+            <planeGeometry args={[10, 400]} />
+            <meshStandardMaterial color={0x333333} roughness={0.7} metalness={0.05} />
+          </mesh>
+          {/* Разметка */}
+          {Array.from({ length: 16 }).map((_, j) => (
+            <mesh key={`cross-mark-${j}`} rotation={[-Math.PI / 2, Math.PI / 2, 0]} position={[0, 0.01, -180 + j * 24]}>
+              <planeGeometry args={[0.5, 5]} />
+              <meshStandardMaterial color={0xFFFFFF} />
+            </mesh>
+          ))}
+        </group>
+      ))}
     </>
   )
 }

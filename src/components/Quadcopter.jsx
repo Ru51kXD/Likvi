@@ -16,7 +16,7 @@ const Quadcopter = React.forwardRef((props, ref) => {
   
   usePhysics(quadcopterRef)
   
-  // Управление с клавиатуры
+  // Управление с клавиатуры (реалистичное управление дроном)
   useFrame(() => {
     if (!keys) return
     
@@ -32,47 +32,73 @@ const Quadcopter = React.forwardRef((props, ref) => {
       if (anyControl) state.startFlight()
       return
     }
-    const currentThrottle = state.throttle
-    let newYaw = state.yaw
-    let newMoveX = 0
-    let newMoveZ = 0
     
-    // Управление газом - Q/E
+    const currentThrottle = state.throttle
+    let newPitch = state.pitch
+    let newRoll = state.roll
+    let newYaw = state.yaw
+    
+    // Управление газом - ТОЛЬКО Q/E
+    // Q - увеличить газ
+    // E - уменьшить газ
+    const throttleRate = 0.025 // Скорость изменения газа
     if (keys['q'] || keys['Q'] || keys['ц'] || keys['Ц']) {
-      state.setThrottle(currentThrottle + 0.03)
+      state.setThrottle(currentThrottle + throttleRate)
     }
     if (keys['e'] || keys['E'] || keys['у'] || keys['У']) {
-      state.setThrottle(currentThrottle - 0.03)
+      state.setThrottle(currentThrottle - throttleRate)
     }
     
-    // WASD как прямое перемещение:
-    // W вперед, A назад, S влево, D вправо
-    if (keys['w'] || keys['W'] || keys['ц'] || keys['Ц']) newMoveZ += 1
-    if (keys['a'] || keys['A'] || keys['ф'] || keys['Ф']) newMoveZ -= 1
-    if (keys['s'] || keys['S'] || keys['ы'] || keys['Ы']) newMoveX -= 1
-    if (keys['d'] || keys['D'] || keys['в'] || keys['В']) newMoveX += 1
+    // Управление движением - WASD
+    // W - движение вперед (наклон вперед через pitch)
+    // S - движение назад (наклон назад через pitch)
+    // A - движение влево (наклон влево через roll)
+    // D - движение вправо (наклон вправо через roll)
+    const pitchRate = 0.08
+    const rollRate = 0.08
     
-    // Поворот - стрелки
+    if (keys['w'] || keys['W'] || keys['ц'] || keys['Ц']) {
+      // W - движение вперед (наклон вперед, БЕЗ изменения газа)
+      newPitch = Math.min(1, newPitch + pitchRate)
+    }
+    if (keys['s'] || keys['S'] || keys['ы'] || keys['Ы']) {
+      // S - движение назад (наклон назад, БЕЗ изменения газа)
+      newPitch = Math.max(-1, newPitch - pitchRate)
+    }
+    if (keys['a'] || keys['A'] || keys['ф'] || keys['Ф']) {
+      // A - наклон влево (положительный roll)
+      newRoll = Math.min(1, newRoll + rollRate)
+    }
+    if (keys['d'] || keys['D'] || keys['в'] || keys['В']) {
+      // D - наклон вправо (отрицательный roll)
+      newRoll = Math.max(-1, newRoll - rollRate)
+    }
+    
+    // Стрелки влево/вправо - yaw (поворот вокруг вертикальной оси)
+    const yawRate = 0.04 // Уменьшена чувствительность поворота
     if (keys['ArrowLeft']) {
-      newYaw = Math.min(1, newYaw + 0.05)
+      newYaw = Math.min(1, newYaw + yawRate)
     }
     if (keys['ArrowRight']) {
-      newYaw = Math.max(-1, newYaw - 0.05)
+      newYaw = Math.max(-1, newYaw - yawRate)
     }
     
-    // Нормализация вектора движения (диагонали)
-    const len = Math.hypot(newMoveX, newMoveZ)
-    if (len > 1) {
-      newMoveX /= len
-      newMoveZ /= len
+    // Более быстрое возвращение к нулю при отпускании клавиш (для лучшего контроля)
+    if (!(keys['w'] || keys['W'] || keys['ц'] || keys['Ц']) && 
+        !(keys['s'] || keys['S'] || keys['ы'] || keys['Ы'])) {
+      newPitch *= 0.88 // Быстрее возвращается к нулю
+    }
+    if (!(keys['a'] || keys['A'] || keys['ф'] || keys['Ф']) && 
+        !(keys['d'] || keys['D'] || keys['в'] || keys['В'])) {
+      newRoll *= 0.88
     }
     if (!keys['ArrowLeft'] && !keys['ArrowRight']) {
-      newYaw *= 0.95
+      newYaw *= 0.88
     }
     
+    state.setPitch(newPitch)
+    state.setRoll(newRoll)
     state.setYaw(newYaw)
-    state.setMoveX(newMoveX)
-    state.setMoveZ(newMoveZ)
   })
   
   // Вращение винтов

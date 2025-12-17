@@ -10,11 +10,13 @@ function SettingsPanel() {
     showTrajectory,
     particleEffects,
     soundEnabled,
+    speedMultiplier,
     setCameraMode,
     toggleHUD,
     toggleTrajectory,
     toggleParticles,
     toggleSound,
+    setSpeedMultiplier,
     resetFlight
   } = useSimulatorStore()
   
@@ -94,6 +96,19 @@ function SettingsPanel() {
           </label>
         </div>
         
+        <div className="setting-group">
+          <label>Скорость полета: x{(Math.round(speedMultiplier * 10) / 10).toFixed(1)}</label>
+          <input
+            type="range"
+            min="0.2"
+            max="3"
+            step="0.1"
+            value={speedMultiplier}
+            onChange={(e) => setSpeedMultiplier(parseFloat(e.target.value))}
+          />
+          <div style={{ fontSize: 12, opacity: 0.7 }}>Быстрые клавиши: 1 — медленнее, 2 — быстрее</div>
+        </div>
+
         <div className="setting-group">
           <button onClick={resetFlight} className="reset-button">
             Сбросить полет
